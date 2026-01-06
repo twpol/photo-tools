@@ -1,2 +1,3 @@
-# photo-tools
-Graphical tools for managing photos
+# Photo Tools
+
+Graphical tools for managing photos.
