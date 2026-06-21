@@ -14,6 +14,15 @@ namespace Photo_Reviewer
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         #endregion
 
+        readonly string[] Extensions = [
+            ".bmp",
+            ".gif",
+            ".jpeg",
+            ".jpg",
+            ".png",
+            ".tiff",
+        ];
+
         readonly List<Photo> Photos = [];
 
         public readonly string Path = path;
@@ -35,7 +44,7 @@ namespace Photo_Reviewer
         {
             foreach (var file in Directory.GetFiles(Path, "*", SearchOption.AllDirectories))
             {
-                Photos.Add(new(file));
+                if (Extensions.Contains(System.IO.Path.GetExtension(file))) Photos.Add(new(file));
             }
         }
     }
