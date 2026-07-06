@@ -1,7 +1,12 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Eto.Drawing;
 using Eto.Forms;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Photo_Reviewer
 {
@@ -64,7 +69,21 @@ namespace Photo_Reviewer
 
         void BackgroundLoadImage()
         {
-            Image = new Bitmap(Folder.Current.Path);
+            var decoder = new DecoderOptions()
+            {
+                MaxFrames = 1,
+            };
+
+            using var imageSharp = SixLabors.ImageSharp.Image.Load<Bgra32>(decoder, Folder.Current.Path);
+            imageSharp.Mutate(x => x.AutoOrient());
+
+            Image = new(imageSharp.Width, imageSharp.Height, PixelFormat.Format32bppRgba);
+            using var bitmapData = Image.Lock();
+
+            // NOTE: Holy hacks, Batman!
+            // NOTE: Eto.Forms does not seem to provide either Span<T> or Memory<T> access to BitmapData
+            var span = MemoryMarshal.CreateSpan(ref Unsafe.AddByteOffset(ref Unsafe.NullRef<byte>(), bitmapData.Data), bitmapData.ScanWidth * bitmapData.Image.Height);
+            imageSharp.CopyPixelDataTo(span);
         }
     }
 }
