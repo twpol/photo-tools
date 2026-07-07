@@ -46,6 +46,7 @@ namespace Photo_Reviewer
             {
                 if (Extensions.Contains(System.IO.Path.GetExtension(file))) Photos.Add(new(file));
             }
+            Photos.Sort();
         }
     }
 }
