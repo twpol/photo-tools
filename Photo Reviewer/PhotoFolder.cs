@@ -46,7 +46,7 @@ namespace Photo_Reviewer
         {
             foreach (var file in Directory.GetFiles(Path, "*", SearchOption.AllDirectories))
             {
-                if (Extensions.Contains(System.IO.Path.GetExtension(file))) Photos.Add(new(file));
+                if (Extensions.Contains(System.IO.Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) Photos.Add(new(file));
             }
             Photos.Sort();
         }
