@@ -14,7 +14,7 @@ namespace Photo_Reviewer
     {
         readonly PhotoFolder Folder;
 
-        Bitmap Image = new(1, 1, PixelFormat.Format32bppRgb);
+        Bitmap Image = new(1, 1, PixelFormat.Format32bppRgba);
 
         public MainForm(PhotoFolder folder)
         {
@@ -62,8 +62,16 @@ namespace Photo_Reviewer
 
         async Task LoadAndShowImage()
         {
-            ImageLabel.Text = $"Showing photo {Folder.CurrentIndex + 1} of {Folder.Count}: {Folder.Current.Path}";
-            await Task.Run(BackgroundLoadImage);
+            if (Folder.CurrentValid)
+            {
+                ImageLabel.Text = $"Showing photo {Folder.CurrentIndex + 1} of {Folder.Count}: {Folder.Current.Path}";
+                await Task.Run(BackgroundLoadImage);
+            }
+            else
+            {
+                ImageLabel.Text = $"No photos: {Folder.Path}";
+                Image = new(1, 1, PixelFormat.Format32bppRgba);
+            }
             ImageDrawable.Invalidate();
         }
 

@@ -38,6 +38,8 @@ namespace Photo_Reviewer
             }
         }
 
+        public bool CurrentValid => CurrentIndex >= 0 && CurrentIndex < Photos.Count;
+
         public Photo Current => Photos[CurrentIndex];
 
         public void Load()
