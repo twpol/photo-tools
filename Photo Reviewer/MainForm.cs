@@ -64,8 +64,10 @@ namespace Photo_Reviewer
         {
             if (Folder.CurrentValid)
             {
+                var currentPath = Folder.Current.Path;
                 ImageLabel.Text = $"Showing photo {Folder.CurrentIndex + 1} of {Folder.Count}: {Folder.Current.Path}";
-                await Task.Run(BackgroundLoadImage);
+                var image = await Task.Run(BackgroundLoadImage);
+                if (currentPath == Folder.Current.Path) Image = image;
             }
             else
             {
@@ -75,7 +77,7 @@ namespace Photo_Reviewer
             ImageDrawable.Invalidate();
         }
 
-        void BackgroundLoadImage()
+        Bitmap BackgroundLoadImage()
         {
             var decoder = new DecoderOptions()
             {
@@ -85,13 +87,15 @@ namespace Photo_Reviewer
             using var imageSharp = SixLabors.ImageSharp.Image.Load<Bgra32>(decoder, Folder.Current.Path);
             imageSharp.Mutate(x => x.AutoOrient());
 
-            Image = new(imageSharp.Width, imageSharp.Height, PixelFormat.Format32bppRgba);
-            using var bitmapData = Image.Lock();
+            var image = new Bitmap(imageSharp.Width, imageSharp.Height, PixelFormat.Format32bppRgba);
+            using var bitmapData = image.Lock();
 
             // NOTE: Holy hacks, Batman!
             // NOTE: Eto.Forms does not seem to provide either Span<T> or Memory<T> access to BitmapData
             var span = MemoryMarshal.CreateSpan(ref Unsafe.AddByteOffset(ref Unsafe.NullRef<byte>(), bitmapData.Data), bitmapData.ScanWidth * bitmapData.Image.Height);
             imageSharp.CopyPixelDataTo(span);
+
+            return image;
         }
     }
 }
