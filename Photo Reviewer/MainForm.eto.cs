@@ -12,8 +12,10 @@ namespace Photo_Reviewer
 
         void InitializeComponent()
         {
+            var font = SystemFonts.Default();
+
             Title = "JGR Photo Reviewer";
-            MinimumSize = new Size(640, 480);
+            MinimumSize = new Size((int)(font.LineHeight * 56), (int)(font.LineHeight * 42));
             Padding = DefaultSpacing;
             Shown += MainForm_Shown;
 

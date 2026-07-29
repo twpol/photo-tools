@@ -14,7 +14,7 @@ namespace Photo_Reviewer
     {
         readonly PhotoFolder Folder;
 
-        Bitmap Image = new(1, 1, PixelFormat.Format32bppRgb);
+        Bitmap Image = new(1, 1, PixelFormat.Format32bppRgba);
 
         public MainForm(PhotoFolder folder)
         {
@@ -24,6 +24,7 @@ namespace Photo_Reviewer
 
         async void MainForm_Shown(object? sender, EventArgs e)
         {
+            await InitialiseFolder();
             await LoadFolder();
             await LoadAndShowImage();
         }
@@ -54,6 +55,49 @@ namespace Photo_Reviewer
             e.Graphics.DrawImage(Image, new RectangleF(location, size));
         }
 
+        async Task InitialiseFolder()
+        {
+            if (Folder.IsInitialised)
+            {
+                return;
+            }
+            var font = SystemFonts.Default();
+            var answer = PhotoRating.Unrated;
+            await new Dialog
+            {
+                Width = (int)(font.LineHeight * 42),
+                Padding = DefaultSpacing,
+                Content = new StackLayout
+                {
+                    Spacing = DefaultSpacing,
+                    Orientation = Orientation.Vertical,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    Items =
+                    {
+                        new Label() { Text = "This folder has not been reviewed before:" },
+                        new Label() { Text = Folder.Path },
+                        new Label() { Text = "To review a folder, all photos are organised into four categories:\n• Unrated\n• Rated positive\n• Rated neutral\n• Rated negative" },
+                        new Label() { Text = "Exactly one category must be used by the folder itself, and the remaining three categories will become sub-folders" },
+                        new Label() { Text = "Advice: Choose 'Unrated' if other applications will add photos" },
+                        new Label() { Text = "Advice: Choose 'Rated positive' if other applications will use rated photos" },
+                        new Label() { Text = "Which category should be used for this folder?" },
+                        new StackLayout
+                        {
+                            Spacing = DefaultSpacing,
+                            Orientation = Orientation.Horizontal,
+                            Items =
+                            {
+                                new StackLayoutItem(new Button((sender, e) => { answer = PhotoRating.Unrated; (sender as Button)?.ParentWindow.Close(); }) { Text = "Unrated" }, true),
+                                new StackLayoutItem(new Button((sender, e) => { answer = PhotoRating.Rated2;  (sender as Button)?.ParentWindow.Close(); }) { Text = "Rated positive", Enabled = false }, true),
+                                new StackLayoutItem(new Button((sender, e) => Environment.Exit(0)) { Text = "Cancel" }, true),
+                            },
+                        },
+                    },
+                },
+            }.ShowModalAsync(this);
+            await Folder.Initialise(answer);
+        }
+
         async Task LoadFolder()
         {
             ImageLabel.Text = $"Loading folder: {Folder.Path}";
@@ -62,12 +106,22 @@ namespace Photo_Reviewer
 
         async Task LoadAndShowImage()
         {
-            ImageLabel.Text = $"Showing photo {Folder.CurrentIndex + 1} of {Folder.Count}: {Folder.Current.Path}";
-            await Task.Run(BackgroundLoadImage);
+            if (Folder.CurrentValid)
+            {
+                var currentPath = Folder.Current.Path;
+                ImageLabel.Text = $"Showing photo {Folder.CurrentIndex + 1} of {Folder.Count}: {Folder.Current.Path}";
+                var image = await Task.Run(BackgroundLoadImage);
+                if (currentPath == Folder.Current.Path) Image = image;
+            }
+            else
+            {
+                ImageLabel.Text = $"No photos: {Folder.Path}";
+                Image = new(1, 1, PixelFormat.Format32bppRgba);
+            }
             ImageDrawable.Invalidate();
         }
 
-        void BackgroundLoadImage()
+        Bitmap BackgroundLoadImage()
         {
             var decoder = new DecoderOptions()
             {
@@ -77,13 +131,15 @@ namespace Photo_Reviewer
             using var imageSharp = SixLabors.ImageSharp.Image.Load<Bgra32>(decoder, Folder.Current.Path);
             imageSharp.Mutate(x => x.AutoOrient());
 
-            Image = new(imageSharp.Width, imageSharp.Height, PixelFormat.Format32bppRgba);
-            using var bitmapData = Image.Lock();
+            var image = new Bitmap(imageSharp.Width, imageSharp.Height, PixelFormat.Format32bppRgba);
+            using var bitmapData = image.Lock();
 
             // NOTE: Holy hacks, Batman!
             // NOTE: Eto.Forms does not seem to provide either Span<T> or Memory<T> access to BitmapData
             var span = MemoryMarshal.CreateSpan(ref Unsafe.AddByteOffset(ref Unsafe.NullRef<byte>(), bitmapData.Data), bitmapData.ScanWidth * bitmapData.Image.Height);
             imageSharp.CopyPixelDataTo(span);
+
+            return image;
         }
     }
 }
