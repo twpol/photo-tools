@@ -24,6 +24,7 @@ namespace Photo_Reviewer
 
         async void MainForm_Shown(object? sender, EventArgs e)
         {
+            await InitialiseFolder();
             await LoadFolder();
             await LoadAndShowImage();
         }
@@ -52,6 +53,49 @@ namespace Photo_Reviewer
             var size = new SizeF(input.Width * scale, input.Height * scale);
             var location = new PointF((output.Width - size.Width) / 2, (output.Height - size.Height) / 2);
             e.Graphics.DrawImage(Image, new RectangleF(location, size));
+        }
+
+        async Task InitialiseFolder()
+        {
+            if (Folder.IsInitialised)
+            {
+                return;
+            }
+            var font = SystemFonts.Default();
+            var answer = PhotoRating.Unrated;
+            await new Dialog
+            {
+                Width = (int)(font.LineHeight * 42),
+                Padding = DefaultSpacing,
+                Content = new StackLayout
+                {
+                    Spacing = DefaultSpacing,
+                    Orientation = Orientation.Vertical,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    Items =
+                    {
+                        new Label() { Text = "This folder has not been reviewed before:" },
+                        new Label() { Text = Folder.Path },
+                        new Label() { Text = "To review a folder, all photos are organised into four categories:\n• Unrated\n• Rated positive\n• Rated neutral\n• Rated negative" },
+                        new Label() { Text = "Exactly one category must be used by the folder itself, and the remaining three categories will become sub-folders" },
+                        new Label() { Text = "Advice: Choose 'Unrated' if other applications will add photos" },
+                        new Label() { Text = "Advice: Choose 'Rated positive' if other applications will use rated photos" },
+                        new Label() { Text = "Which category should be used for this folder?" },
+                        new StackLayout
+                        {
+                            Spacing = DefaultSpacing,
+                            Orientation = Orientation.Horizontal,
+                            Items =
+                            {
+                                new StackLayoutItem(new Button((sender, e) => { answer = PhotoRating.Unrated; (sender as Button)?.ParentWindow.Close(); }) { Text = "Unrated" }, true),
+                                new StackLayoutItem(new Button((sender, e) => { answer = PhotoRating.Rated2;  (sender as Button)?.ParentWindow.Close(); }) { Text = "Rated positive", Enabled = false }, true),
+                                new StackLayoutItem(new Button((sender, e) => Environment.Exit(0)) { Text = "Cancel" }, true),
+                            },
+                        },
+                    },
+                },
+            }.ShowModalAsync(this);
+            await Folder.Initialise(answer);
         }
 
         async Task LoadFolder()
